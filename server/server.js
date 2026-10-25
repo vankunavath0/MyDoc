@@ -19,9 +19,6 @@ const {
 
 const app = express();
 
-
-const cors = require("cors");
-
 const allowedOrigins = [
   "http://localhost:5173",
   "https://mydoc-k6h0.onrender.com",
