@@ -1,0 +1,449 @@
+
+.application-page {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.application-page .page-header h1 {
+  margin: 7px 0;
+  color: #202938;
+  font-size: 27px;
+}
+
+.application-page .page-header p,
+.content-toolbar p {
+  margin: 5px 0 0;
+  color: #7b8494;
+  font-size: 13px;
+}
+
+.eyebrow {
+  color: #3568d4;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.4px;
+}
+
+.application-page .content-toolbar h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.application-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-button {
+  padding: 8px 13px;
+  border: 1px solid #e1e6ef;
+  border-radius: 8px;
+  background: white;
+  color: #687386;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-button.active {
+  border-color: #d5e2ff;
+  background: #edf3ff;
+  color: #285cc4;
+  font-weight: 700;
+}
+
+.application-page .upload-zone {
+  margin-bottom: 24px;
+  padding: 24px 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fafcff;
+  text-align: center;
+  transition: 0.2s ease;
+}
+
+.application-page .upload-zone.dragging {
+  border-color: #3568d4;
+  background: #edf4ff;
+}
+
+.upload-symbol {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 12px;
+  place-items: center;
+  border-radius: 12px;
+  background: #edf3ff;
+  color: #3568d4;
+  font-size: 25px;
+}
+
+.application-page .upload-zone h3 {
+  margin: 0;
+  color: #273244;
+  font-size: 15px;
+}
+
+.application-page .upload-zone p {
+  margin: 8px 0 15px;
+  color: #7b8494;
+  font-size: 12px;
+}
+
+.document-cover {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 155px;
+  overflow: hidden;
+  place-items: center;
+  border: 0;
+  border-bottom: 1px solid #edf0f5;
+  background: #f5f7fb;
+  cursor: pointer;
+}
+
+.document-cover > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.generic-cover {
+  display: flex;
+  width: 74px;
+  min-height: 94px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #e0e6ef;
+  border-radius: 5px;
+  background: white;
+  box-shadow: 0 3px 8px #1e293b0a;
+}
+
+.file-icon {
+  display: grid;
+  min-width: 35px;
+  min-height: 32px;
+  padding: 5px;
+  place-items: center;
+  border-radius: 5px;
+  background: #e8efff;
+  color: #3568d4;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.file-icon.pdf {
+  background: #fee9e7;
+  color: #c43e3e;
+}
+
+.file-icon.word {
+  background: #e4edff;
+  color: #285cc4;
+}
+
+.file-icon.excel {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.file-icon.slides {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.paper-lines {
+  width: 100%;
+  height: 4px;
+  border-radius: 3px;
+  background: #e5e9f0;
+}
+
+.paper-lines.short {
+  width: 60%;
+}
+
+.cover-view {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffffed;
+  color: #3568d4;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.document-cover:hover .cover-view,
+.document-cover:focus-visible .cover-view {
+  opacity: 1;
+}
+
+.application-type {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #edf3ff;
+  color: #285cc4;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.document-info h3 {
+  overflow: hidden;
+  margin: 0;
+  color: #273244;
+  font-size: 13px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.application-dates {
+  display: grid;
+  gap: 6px;
+  margin-top: 13px;
+  padding: 11px 0;
+  border-top: 1px solid #edf0f5;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.application-dates p {
+  margin: 0;
+  color: #687386;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.application-notes {
+  overflow-wrap: anywhere;
+  color: #687386;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.application-page .document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.application-page .document-actions button,
+.application-page .document-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 8px;
+  border: 1px solid #e1e6ef;
+  border-radius: 6px;
+  background: white;
+  color: #526075;
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.application-page .document-actions button:hover,
+.application-page .document-actions a:hover {
+  background: #f1f5fb;
+}
+
+.application-page .document-actions .delete-button {
+  border-color: #f3d4d4;
+  background: #fff5f5;
+  color: #c43e3e;
+}
+
+.preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 20px;
+  background: #17203399;
+  backdrop-filter: blur(4px);
+}
+
+.preview-modal,
+.form-modal {
+  width: min(100%, 850px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border: 1px solid #e5e9f0;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 20px 70px #0002;
+}
+
+.form-modal {
+  width: min(100%, 540px);
+  padding: 22px;
+}
+
+.preview-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #e7eaf0;
+  background: white;
+}
+
+.preview-header h2 {
+  margin: 0;
+  color: #273244;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.preview-header p {
+  margin: 6px 0 0;
+  color: #7b8494;
+  font-size: 11px;
+}
+
+.close-button {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  background: white;
+  color: #526075;
+}
+
+.preview-body {
+  display: flex;
+  min-height: 250px;
+  max-height: calc(100vh - 130px);
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 20px;
+  background: #f5f7fb;
+}
+
+.large-image {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.pdf-preview {
+  width: 100%;
+  height: 65vh;
+  border: 0;
+  background: white;
+}
+
+.media-preview {
+  max-width: 100%;
+  max-height: 65vh;
+}
+
+.text-preview {
+  width: 100%;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 8px;
+  background: white;
+  color: #273244;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.unsupported-preview {
+  padding: 35px 15px;
+  text-align: center;
+}
+
+.unsupported-preview .file-icon {
+  margin: 0 auto 15px;
+}
+
+.unsupported-preview h3 {
+  overflow-wrap: anywhere;
+}
+
+.unsupported-preview p {
+  color: #687386;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.form-modal form {
+  padding-top: 20px;
+}
+
+.form-modal small {
+  color: #7b8494;
+  font-size: 11px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 650px) {
+  .application-page .page-header h1 {
+    font-size: 23px;
+  }
+
+  .application-page .page-header {
+    align-items: flex-start;
+  }
+
+  .application-page .upload-zone {
+    padding: 20px 12px;
+  }
+
+  .document-cover {
+    height: 125px;
+  }
+
+  .preview-backdrop {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .preview-modal,
+  .form-modal {
+    max-height: calc(100vh - 20px);
+  }
+
+  .form-modal {
+    padding: 14px;
+  }
+
+  .preview-body {
+    padding: 12px;
+  }
+
+  .pdf-preview {
+    height: 65vh;
+  }
+}
