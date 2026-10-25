@@ -42,6 +42,18 @@ app.use(cors({
 }));
 app.use(express.json());
 
+app.get("/health", (req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  const authConfigured = Boolean(process.env.AUTH_PASSWORD);
+  const ready = databaseReady && authConfigured;
+
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "ok" : "starting",
+    database: databaseReady ? "connected" : "disconnected",
+    authentication: authConfigured ? "configured" : "missing configuration",
+  });
+});
+
 const dns = require("node:dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
@@ -688,24 +700,50 @@ app.delete("/api/calendar-events/:id", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
-async function startServer() {
-  try {
-    if (!process.env.AUTH_PASSWORD) {
-      throw new Error("Set AUTH_PASSWORD in server/.env before starting the API.");
-    }
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB");
-
-    app.listen(PORT, () => {
-      console.log(`DocSpace API running at http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error("Could not start server:", error.message);
-    process.exit(1);
+function connectToDatabase() {
+  if (!process.env.MONGODB_URI) {
+    console.error("MONGODB_URI is missing; database connection will be retried.");
   }
+
+  async function connect() {
+    while (mongoose.connection.readyState !== 1) {
+      try {
+        if (!process.env.MONGODB_URI) {
+          throw new Error("MONGODB_URI is not configured.");
+        }
+
+        await mongoose.connect(process.env.MONGODB_URI, {
+          serverSelectionTimeoutMS: 10000,
+        });
+        console.log("Connected to MongoDB");
+      } catch (error) {
+        console.error("MongoDB connection failed; retrying in 5 seconds:", error.message);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+  }
+
+  void connect();
 }
+
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`DocSpace API listening on 0.0.0.0:${PORT}`);
+  if (!process.env.AUTH_PASSWORD) {
+    console.error("AUTH_PASSWORD is missing; configure it in the Render environment.");
+  }
+  connectToDatabase();
+});
+
+function shutdown() {
+  server.close(() => {
+    mongoose.disconnect().finally(() => process.exit(0));
+  });
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 const applicationUpload = upload;
 
@@ -890,5 +928,3 @@ app.delete("/api/applications/:id", async (req, res) => {
     res.status(500).json({ message: "Could not delete application." });
   }
 });
-
-startServer();
