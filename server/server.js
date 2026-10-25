@@ -728,8 +728,8 @@ function connectToDatabase() {
   void connect();
 }
 
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`DocSpace API listening on 0.0.0.0:${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`DocSpace API listening on port ${PORT}`);
   if (!process.env.AUTH_PASSWORD) {
     console.error("AUTH_PASSWORD is missing; configure it in the Render environment.");
   }
