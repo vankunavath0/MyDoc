@@ -19,31 +19,29 @@ const {
 
 const app = express();
 
+
 const cors = require("cors");
 
-
-  
-
-
-const allowedOrigins = new Set([
-  
+const allowedOrigins = [
+  "http://localhost:5173",
   "https://mydoc-k6h0.onrender.com",
-  ...(process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-]);
+];
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Origin is not allowed by CORS."));
-  },
-  credentials: true,
-}));
-app.use(express.json());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests without an Origin header, such as server-to-server requests.
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.error("Blocked CORS origin:", origin);
+      return callback(new Error("Origin is not allowed by CORS."));
+    },
+    credentials: true,
+  })
+);
+
 
 app.get("/health", (req, res) => {
   const databaseReady = mongoose.connection.readyState === 1;
