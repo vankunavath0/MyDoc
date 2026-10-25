@@ -1,6 +1,3 @@
-
-
-
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
@@ -22,9 +19,15 @@ const {
 
 const app = express();
 
+const cors = require("cors");
+
+
+  
+
+
 const allowedOrigins = new Set([
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
+  
+  "https://mydoc-k6h0.onrender.com",
   ...(process.env.CORS_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
