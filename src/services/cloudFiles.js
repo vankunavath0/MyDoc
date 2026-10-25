@@ -1,13 +1,13 @@
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ||
-  "https://mydoc-backend-qhsu.onrender.com/"
+  "https://mydoc-backend-qhsu.onrender.com"
 ).replace(/\/+$/, "");
-const API_URL = `${API_BASE_URL}/documents`;
-const APPLICATIONS_URL = `${API_BASE_URL}/applications`;
-const PEOPLE_URL = `${API_BASE_URL}/people`;
-const FOLDERS_URL = `${API_BASE_URL}/folders`;
-const CALENDAR_EVENTS_URL = `${API_BASE_URL}/calendar-events`;
+const API_URL = `${API_BASE_URL}/api/documents`;
+const APPLICATIONS_URL = `${API_BASE_URL}/api/applications`;
+const PEOPLE_URL = `${API_BASE_URL}/api/people`;
+const FOLDERS_URL = `${API_BASE_URL}/api/folders`;
+const CALENDAR_EVENTS_URL = `${API_BASE_URL}/api/calendar-events`;
 
 async function requestJson(url, options, errorMessage) {
   const response = await fetch(url, { credentials: "include", ...options });
@@ -22,7 +22,7 @@ async function requestJson(url, options, errorMessage) {
 
 export async function login(password, rememberDevice) {
   return requestJson(
-    `${API_BASE_URL}/auth/login`,
+    `${API_BASE_URL}/api/auth/login`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -34,7 +34,7 @@ export async function login(password, rememberDevice) {
 
 export async function getCurrentSession() {
   return requestJson(
-    `${API_BASE_URL}/auth/session`,
+    `${API_BASE_URL}/api/auth/session`,
     undefined,
     "Sign-in required"
   );
@@ -42,7 +42,7 @@ export async function getCurrentSession() {
 
 export async function restoreRememberedSession() {
   return requestJson(
-    `${API_BASE_URL}/auth/remembered-login`,
+    `${API_BASE_URL}/api/auth/remembered-login`,
     { method: "POST" },
     "This device is not remembered"
   );
@@ -50,7 +50,7 @@ export async function restoreRememberedSession() {
 
 export async function logout() {
   return requestJson(
-    `${API_BASE_URL}/auth/logout`,
+    `${API_BASE_URL}/api/auth/logout`,
     { method: "POST" },
     "Could not sign out"
   );
@@ -58,7 +58,7 @@ export async function logout() {
 
 export async function refreshSession() {
   return requestJson(
-    `${API_BASE_URL}/auth/session`,
+    `${API_BASE_URL}/api/auth/session`,
     undefined,
     "Session expired"
   );
