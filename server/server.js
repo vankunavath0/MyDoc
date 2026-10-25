@@ -22,7 +22,24 @@ const {
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  ...(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+]);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 const dns = require("node:dns");
@@ -57,10 +74,12 @@ function getCookie(req, name) {
 }
 
 function setCookie(res, name, value, maxAge) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const production = process.env.NODE_ENV === "production";
+  const secure = production ? "; Secure" : "";
+  const sameSite = production ? "None" : "Strict";
   res.append(
     "Set-Cookie",
-    `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`
+    `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=${sameSite}; Path=/; Max-Age=${maxAge}${secure}`
   );
 }
 

@@ -1,5 +1,8 @@
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://mydoc-backend-qhsu.onrender.com/"
+).replace(/\/+$/, "");
 const API_URL = `${API_BASE_URL}/documents`;
 const APPLICATIONS_URL = `${API_BASE_URL}/applications`;
 const PEOPLE_URL = `${API_BASE_URL}/people`;
