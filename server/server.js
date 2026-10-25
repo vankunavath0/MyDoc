@@ -27,7 +27,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without an Origin header, such as server-to-server requests.
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -39,6 +38,9 @@ app.use(
   })
 );
 
+// Parse JSON and URL-encoded requests before the routes.
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/health", (req, res) => {
   const databaseReady = mongoose.connection.readyState === 1;
@@ -48,13 +50,14 @@ app.get("/health", (req, res) => {
   res.status(ready ? 200 : 503).json({
     status: ready ? "ok" : "starting",
     database: databaseReady ? "connected" : "disconnected",
-    authentication: authConfigured ? "configured" : "missing configuration",
+    authentication: authConfigured
+      ? "configured"
+      : "missing configuration",
   });
 });
 
 const dns = require("node:dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
-
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -64,7 +67,7 @@ cloudinary.config({
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 const OWNER_ID = "local-demo-user";
@@ -80,13 +83,17 @@ function getCookie(req, name) {
     ?.split(";")
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${name}=`));
-  return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
+
+  return cookie
+    ? decodeURIComponent(cookie.slice(name.length + 1))
+    : null;
 }
 
 function setCookie(res, name, value, maxAge) {
   const production = process.env.NODE_ENV === "production";
   const secure = production ? "; Secure" : "";
   const sameSite = production ? "None" : "Strict";
+
   res.append(
     "Set-Cookie",
     `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=${sameSite}; Path=/; Max-Age=${maxAge}${secure}`
@@ -105,7 +112,9 @@ function passwordMatches(candidate) {
   const expected = createHash("sha256")
     .update(process.env.AUTH_PASSWORD || "")
     .digest();
+
   const actual = createHash("sha256").update(candidate).digest();
+
   return timingSafeEqual(expected, actual);
 }
 
@@ -116,53 +125,70 @@ async function createAuthSession(res, session, deviceToken = null) {
 
   session.sessionTokenHash = hashToken(sessionToken);
   session.sessionExpiresAt = sessionExpiresAt;
+
   if (deviceToken) {
     session.deviceTokenHash = hashToken(deviceToken);
     session.deviceExpiresAt = new Date(now + REMEMBER_DEVICE_MS);
   } else if (!session.deviceTokenHash) {
     session.deviceExpiresAt = sessionExpiresAt;
   }
+
   await session.save();
 
   setCookie(res, SESSION_COOKIE, sessionToken, SESSION_IDLE_MS / 1000);
+
   return sessionExpiresAt;
 }
 
+// Login
 app.post("/api/auth/login", async (req, res) => {
   try {
+    const body = req.body || {};
     const now = Date.now();
     const ip = req.ip || "unknown";
+
     const attempts = loginAttempts.get(ip);
+
     if (attempts && attempts.resetAt <= now) {
       loginAttempts.delete(ip);
     }
+
     const currentAttempts = loginAttempts.get(ip);
+
     if (currentAttempts && currentAttempts.count >= 10) {
       return res.status(429).json({
-        message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
+        message:
+          "Too many sign-in attempts. Please wait 15 minutes and try again.",
       });
     }
 
     if (
-      typeof req.body.password !== "string" ||
+      typeof body.password !== "string" ||
       !process.env.AUTH_PASSWORD ||
-      !passwordMatches(req.body.password)
+      !passwordMatches(body.password)
     ) {
       const attempt = loginAttempts.get(ip) || {
         count: 0,
         resetAt: now + 15 * 60 * 1000,
       };
+
       attempt.count += 1;
       loginAttempts.set(ip, attempt);
-      return res.status(401).json({ message: "Incorrect password." });
+
+      return res.status(401).json({
+        message: "Incorrect password.",
+      });
     }
+
     loginAttempts.delete(ip);
 
     const currentTime = new Date();
-    const rememberDevice = req.body.rememberDevice === true;
+    const rememberDevice = body.rememberDevice === true;
+
     const deviceToken = rememberDevice
       ? randomBytes(32).toString("base64url")
       : null;
+
     const session = await AuthSession.create({
       sessionExpiresAt: currentTime,
       deviceExpiresAt: rememberDevice
@@ -170,12 +196,23 @@ app.post("/api/auth/login", async (req, res) => {
         : new Date(currentTime.getTime() + SESSION_IDLE_MS),
     });
 
-    const expiresAt = await createAuthSession(res, session, deviceToken);
+    const expiresAt = await createAuthSession(
+      res,
+      session,
+      deviceToken
+    );
+
     if (deviceToken) {
-      setCookie(res, DEVICE_COOKIE, deviceToken, REMEMBER_DEVICE_MS / 1000);
+      setCookie(
+        res,
+        DEVICE_COOKIE,
+        deviceToken,
+        REMEMBER_DEVICE_MS / 1000
+      );
     } else {
       clearCookie(res, DEVICE_COOKIE);
     }
+
     res.json({ authenticated: true, expiresAt });
   } catch (error) {
     console.error("Login failed:", error.message);
@@ -183,95 +220,147 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// Check current session
 app.get("/api/auth/session", async (req, res) => {
   try {
     const token = getCookie(req, SESSION_COOKIE);
+
     if (!token) {
-      return res.status(401).json({ message: "Sign-in required." });
+      return res.status(401).json({
+        message: "Sign-in required.",
+      });
     }
 
     const session = await AuthSession.findOne({
       sessionTokenHash: hashToken(token),
       deviceExpiresAt: { $gt: new Date() },
     });
+
     if (!session || session.sessionExpiresAt <= new Date()) {
       clearCookie(res, SESSION_COOKIE);
-      return res.status(401).json({ message: "Session expired." });
+
+      return res.status(401).json({
+        message: "Session expired.",
+      });
     }
 
     const expiresAt = await createAuthSession(res, session);
+
     res.json({ authenticated: true, expiresAt });
   } catch (error) {
     console.error("Check session:", error.message);
-    res.status(500).json({ message: "Could not check sign-in session." });
+
+    res.status(500).json({
+      message: "Could not check sign-in session.",
+    });
   }
 });
 
+// Restore a remembered device
 app.post("/api/auth/remembered-login", async (req, res) => {
   try {
     const token = getCookie(req, DEVICE_COOKIE);
+
     if (!token) {
-      return res.status(401).json({ message: "This device is not remembered." });
+      return res.status(401).json({
+        message: "This device is not remembered.",
+      });
     }
 
     const session = await AuthSession.findOne({
       deviceTokenHash: hashToken(token),
       deviceExpiresAt: { $gt: new Date() },
     });
+
     if (!session) {
       clearCookie(res, DEVICE_COOKIE);
-      return res.status(401).json({ message: "Remembered device expired." });
+
+      return res.status(401).json({
+        message: "Remembered device expired.",
+      });
     }
 
     const expiresAt = await createAuthSession(res, session);
+
     res.json({ authenticated: true, expiresAt });
   } catch (error) {
     console.error("Remembered-device sign-in:", error.message);
-    res.status(500).json({ message: "Could not restore this device session." });
+
+    res.status(500).json({
+      message: "Could not restore this device session.",
+    });
   }
 });
 
+// Logout
 app.post("/api/auth/logout", async (req, res) => {
   try {
     const token = getCookie(req, SESSION_COOKIE);
+
     if (token) {
-      await AuthSession.deleteOne({ sessionTokenHash: hashToken(token) });
+      await AuthSession.deleteOne({
+        sessionTokenHash: hashToken(token),
+      });
     }
+
     clearCookie(res, SESSION_COOKIE);
     clearCookie(res, DEVICE_COOKIE);
-    res.json({ message: "Signed out and removed this device's remembered access." });
+
+    res.json({
+      message: "Signed out and removed this device's remembered access.",
+    });
   } catch (error) {
     console.error("Logout failed:", error.message);
-    res.status(500).json({ message: "Could not sign out." });
+
+    res.status(500).json({
+      message: "Could not sign out.",
+    });
   }
 });
 
+// Protect all other /api routes
 app.use("/api", async (req, res, next) => {
   try {
     const token = getCookie(req, SESSION_COOKIE);
+
     if (!token) {
-      return res.status(401).json({ message: "Sign-in required." });
+      return res.status(401).json({
+        message: "Sign-in required.",
+      });
     }
 
     const session = await AuthSession.findOne({
       sessionTokenHash: hashToken(token),
       deviceExpiresAt: { $gt: new Date() },
     });
+
     if (!session || session.sessionExpiresAt <= new Date()) {
       clearCookie(res, SESSION_COOKIE);
-      return res.status(401).json({ message: "Session expired." });
+
+      return res.status(401).json({
+        message: "Session expired.",
+      });
     }
 
-    session.sessionExpiresAt = new Date(Date.now() + SESSION_IDLE_MS);
+    session.sessionExpiresAt = new Date(
+      Date.now() + SESSION_IDLE_MS
+    );
+
     if (!session.deviceTokenHash) {
       session.deviceExpiresAt = session.sessionExpiresAt;
     }
+
     await session.save();
+
     setCookie(res, SESSION_COOKIE, token, SESSION_IDLE_MS / 1000);
+
     next();
   } catch (error) {
     console.error("Authenticate API request:", error.message);
-    res.status(500).json({ message: "Could not verify sign-in session." });
+
+    res.status(500).json({
+      message: "Could not verify sign-in session.",
+    });
   }
 });
 
@@ -292,14 +381,21 @@ function personRecordFilter(personId) {
 }
 
 function isValidDate(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
   const [year, month, day] = value.split("-").map(Number);
   const parsed = new Date(year, month - 1, day);
-  return parsed.getFullYear() === year &&
+
+  return (
+    parsed.getFullYear() === year &&
     parsed.getMonth() === month - 1 &&
-    parsed.getDate() === day;
+    parsed.getDate() === day
+  );
 }
 
+// People
 app.get("/api/people", async (req, res) => {
   try {
     await Person.updateOne(
@@ -308,23 +404,33 @@ app.get("/api/people", async (req, res) => {
       { upsert: true }
     );
 
-    const people = await Person.find({ ownerId: OWNER_ID }).sort({ createdAt: 1 });
+    const people = await Person.find({
+      ownerId: OWNER_ID,
+    }).sort({ createdAt: 1 });
+
     res.json(people);
   } catch (error) {
     console.error("Load people:", error.message);
-    res.status(500).json({ message: "Could not load people." });
+
+    res.status(500).json({
+      message: "Could not load people.",
+    });
   }
 });
 
 app.post("/api/people", async (req, res) => {
   try {
-    const name = req.body.name?.trim();
+    const body = req.body || {};
+    const name = body.name?.trim();
+
     if (!name) {
-      return res.status(400).json({ message: "Person name is required." });
+      return res.status(400).json({
+        message: "Person name is required.",
+      });
     }
 
     const person = await Person.create({
-      _id: req.body.id || randomUUID(),
+      _id: body.id || randomUUID(),
       name,
       ownerId: OWNER_ID,
     });
@@ -332,25 +438,37 @@ app.post("/api/people", async (req, res) => {
     res.status(201).json(person);
   } catch (error) {
     console.error("Create person:", error.message);
-    res.status(500).json({ message: "Could not save person." });
+
+    res.status(500).json({
+      message: "Could not save person.",
+    });
   }
 });
 
 app.delete("/api/people/:id", async (req, res) => {
   try {
     if (req.params.id === DEFAULT_PERSON_ID) {
-      return res.status(400).json({ message: "The default person cannot be deleted." });
+      return res.status(400).json({
+        message: "The default person cannot be deleted.",
+      });
     }
 
     const person = await Person.findOne({
       _id: req.params.id,
       ownerId: OWNER_ID,
     });
+
     if (!person) {
-      return res.status(404).json({ message: "Person not found." });
+      return res.status(404).json({
+        message: "Person not found.",
+      });
     }
 
-    const documentFilter = { ownerId: OWNER_ID, personId: person._id };
+    const documentFilter = {
+      ownerId: OWNER_ID,
+      personId: person._id,
+    };
+
     const documents = await Document.find(documentFilter);
     const applications = await Application.find(documentFilter);
 
@@ -365,65 +483,101 @@ app.delete("/api/people/:id", async (req, res) => {
     await Promise.all([
       Document.deleteMany(documentFilter),
       Application.deleteMany(documentFilter),
-      Folder.deleteMany({ personId: person._id, ownerId: OWNER_ID }),
-      CalendarEvent.deleteMany({ personId: person._id, ownerId: OWNER_ID }),
+      Folder.deleteMany({
+        personId: person._id,
+        ownerId: OWNER_ID,
+      }),
+      CalendarEvent.deleteMany({
+        personId: person._id,
+        ownerId: OWNER_ID,
+      }),
       person.deleteOne(),
     ]);
 
-    res.json({ message: "Person and their records deleted successfully." });
+    res.json({
+      message: "Person and their records deleted successfully.",
+    });
   } catch (error) {
     console.error("Delete person:", error.message);
-    res.status(500).json({ message: "Could not delete person." });
+
+    res.status(500).json({
+      message: "Could not delete person.",
+    });
   }
 });
 
+// Folders
 app.get("/api/folders", async (req, res) => {
   try {
     const personId = req.query.personId || DEFAULT_PERSON_ID;
-    const folders = await Folder.find({ ownerId: OWNER_ID, personId }).sort({
-      createdAt: 1,
-    });
+
+    const folders = await Folder.find({
+      ownerId: OWNER_ID,
+      personId,
+    }).sort({ createdAt: 1 });
+
     res.json(folders);
   } catch (error) {
     console.error("Load folders:", error.message);
-    res.status(500).json({ message: "Could not load folders." });
+
+    res.status(500).json({
+      message: "Could not load folders.",
+    });
   }
 });
 
 app.post("/api/folders", async (req, res) => {
   try {
-    const name = req.body.name?.trim();
-    const personId = req.body.personId || DEFAULT_PERSON_ID;
-    const parentId = req.body.parentId || null;
+    const body = req.body || {};
+    const name = body.name?.trim();
+    const personId = body.personId || DEFAULT_PERSON_ID;
+    const parentId = body.parentId || null;
 
     if (!name) {
-      return res.status(400).json({ message: "Folder name is required." });
+      return res.status(400).json({
+        message: "Folder name is required.",
+      });
     }
 
-    const person = await Person.findOne({ _id: personId, ownerId: OWNER_ID });
-    if (!person) {
-      return res.status(404).json({ message: "Person not found." });
-    }
-
-    if (parentId && !(await Folder.exists({
-      _id: parentId,
-      personId,
+    const person = await Person.findOne({
+      _id: personId,
       ownerId: OWNER_ID,
-    }))) {
-      return res.status(400).json({ message: "Parent folder not found." });
+    });
+
+    if (!person) {
+      return res.status(404).json({
+        message: "Person not found.",
+      });
+    }
+
+    if (
+      parentId &&
+      !(await Folder.exists({
+        _id: parentId,
+        personId,
+        ownerId: OWNER_ID,
+      }))
+    ) {
+      return res.status(400).json({
+        message: "Parent folder not found.",
+      });
     }
 
     const folder = await Folder.create({
-      _id: req.body.id || randomUUID(),
+      _id: body.id || randomUUID(),
       name,
       personId,
       ownerId: OWNER_ID,
       parentId,
     });
+
     res.status(201).json(folder);
   } catch (error) {
     console.error("Create folder:", error.message);
-    res.status(500).json({ message: "Could not save folder." });
+
+    res.status(500).json({
+      message: "Could not save folder.",
+    });
   }
 });
 
@@ -433,19 +587,25 @@ app.delete("/api/folders/:id", async (req, res) => {
       _id: req.params.id,
       ownerId: OWNER_ID,
     });
+
     if (!folder) {
-      return res.status(404).json({ message: "Folder not found." });
+      return res.status(404).json({
+        message: "Folder not found.",
+      });
     }
 
     const folderIds = new Set([folder._id]);
     let changed = true;
+
     while (changed) {
       changed = false;
+
       const children = await Folder.find({
         ownerId: OWNER_ID,
         personId: folder.personId,
         parentId: { $in: [...folderIds] },
       }).select("_id");
+
       for (const child of children) {
         if (!folderIds.has(child._id)) {
           folderIds.add(child._id);
@@ -461,23 +621,34 @@ app.delete("/api/folders/:id", async (req, res) => {
     });
 
     for (const document of documents) {
-      await cloudinary.uploader.destroy(document.cloudinaryPublicId, {
-        resource_type: document.resourceType || "raw",
-      });
+      if (document.cloudinaryPublicId) {
+        await cloudinary.uploader.destroy(document.cloudinaryPublicId, {
+          resource_type: document.resourceType || "raw",
+        });
+      }
     }
 
     await Promise.all([
-      Document.deleteMany({ _id: { $in: documents.map((item) => item._id) } }),
-      Folder.deleteMany({ _id: { $in: [...folderIds] }, ownerId: OWNER_ID }),
+      Document.deleteMany({
+        _id: { $in: documents.map((item) => item._id) },
+      }),
+      Folder.deleteMany({
+        _id: { $in: [...folderIds] },
+        ownerId: OWNER_ID,
+      }),
     ]);
 
-    res.json({ message: "Folder and its contents deleted successfully." });
+    res.json({
+      message: "Folder and its contents deleted successfully.",
+    });
   } catch (error) {
     console.error("Delete folder:", error.message);
-    res.status(500).json({ message: "Could not delete folder." });
+
+    res.status(500).json({
+      message: "Could not delete folder.",
+    });
   }
 });
-
 function uploadToCloudinary(file) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -503,7 +674,9 @@ app.post("/api/documents", upload.single("file"), async (req, res) => {
 
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "Please select a file." });
+      return res.status(400).json({
+        message: "Please select a file.",
+      });
     }
 
     const documentDate = req.body.documentDate
@@ -511,23 +684,33 @@ app.post("/api/documents", upload.single("file"), async (req, res) => {
       : new Date();
 
     if (Number.isNaN(documentDate.getTime())) {
-      return res.status(400).json({ message: "Please provide a valid document date." });
+      return res.status(400).json({
+        message: "Please provide a valid document date.",
+      });
     }
 
     const ownerId = OWNER_ID;
     const personId = req.body.personId || DEFAULT_PERSON_ID;
 
     if (!(await Person.exists({ _id: personId, ownerId }))) {
-      return res.status(404).json({ message: "Person not found." });
+      return res.status(404).json({
+        message: "Person not found.",
+      });
     }
 
     const folderId = req.body.folderId || null;
-    if (folderId && !(await Folder.exists({
-      _id: folderId,
-      personId,
-      ownerId,
-    }))) {
-      return res.status(400).json({ message: "Folder not found for this person." });
+
+    if (
+      folderId &&
+      !(await Folder.exists({
+        _id: folderId,
+        personId,
+        ownerId,
+      }))
+    ) {
+      return res.status(400).json({
+        message: "Folder not found for this person.",
+      });
     }
 
     uploadedFile = await uploadToCloudinary(req.file);
@@ -549,89 +732,127 @@ app.post("/api/documents", upload.single("file"), async (req, res) => {
     res.status(201).json(document);
   } catch (error) {
     console.error("Upload failed:", error.message);
+
     if (uploadedFile) {
       try {
         await cloudinary.uploader.destroy(uploadedFile.public_id, {
           resource_type: uploadedFile.resource_type,
         });
       } catch (cleanupError) {
-        console.error("Uploaded file cleanup failed:", cleanupError.message);
+        console.error(
+          "Uploaded file cleanup failed:",
+          cleanupError.message
+        );
       }
     }
-    res.status(500).json({ message: "Could not upload the document." });
+
+    res.status(500).json({
+      message: "Could not upload the document.",
+    });
   }
 });
 
 // List documents
 app.get("/api/documents", async (req, res) => {
   try {
-    // Demo only: use the authenticated user's ID here in production.
     const personId = req.query.personId || DEFAULT_PERSON_ID;
-    const documents = await Document.find(personRecordFilter(personId)).sort({
-      createdAt: -1,
-    });
+
+    const documents = await Document.find(
+      personRecordFilter(personId)
+    ).sort({ createdAt: -1 });
 
     res.json(documents);
   } catch (error) {
     console.error("Load documents:", error.message);
-    res.status(500).json({ message: "Could not load documents." });
+
+    res.status(500).json({
+      message: "Could not load documents.",
+    });
   }
 });
 
 // Delete a document
 app.delete("/api/documents/:id", async (req, res) => {
   try {
-    // Demo only: enforce ownership using authenticated user identity
-    // before deploying this endpoint publicly.
     const document = await Document.findOne({
       _id: req.params.id,
       ownerId: OWNER_ID,
     });
 
     if (!document) {
-      return res.status(404).json({ message: "Document not found." });
+      return res.status(404).json({
+        message: "Document not found.",
+      });
     }
 
-    await cloudinary.uploader.destroy(document.cloudinaryPublicId, {
-      resource_type: document.resourceType,
-    });
+    if (document.cloudinaryPublicId) {
+      await cloudinary.uploader.destroy(document.cloudinaryPublicId, {
+        resource_type: document.resourceType || "raw",
+      });
+    }
 
     await document.deleteOne();
 
-    res.json({ message: "Document deleted successfully." });
+    res.json({
+      message: "Document deleted successfully.",
+    });
   } catch (error) {
     console.error("Delete failed:", error.message);
-    res.status(500).json({ message: "Could not delete the document." });
+
+    res.status(500).json({
+      message: "Could not delete the document.",
+    });
   }
 });
 
+// Calendar events
 app.get("/api/calendar-events", async (req, res) => {
   try {
-    const events = await CalendarEvent.find({ ownerId: OWNER_ID }).sort({
+    const events = await CalendarEvent.find({
+      ownerId: OWNER_ID,
+    }).sort({
       date: 1,
       time: 1,
     });
+
     res.json(events);
   } catch (error) {
     console.error("Load calendar events:", error.message);
-    res.status(500).json({ message: "Could not load calendar events." });
+
+    res.status(500).json({
+      message: "Could not load calendar events.",
+    });
   }
 });
 
 app.post("/api/calendar-events", async (req, res) => {
   try {
-    const { title, date, time, endTime, type, notes } = req.body;
-    const personId = req.body.personId || DEFAULT_PERSON_ID;
-    if (!title?.trim() || !isValidDate(date) ||
-        !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) ||
-        !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)) {
-      return res.status(400).json({ message: "Please provide a title, valid date, and valid start and end times." });
+    const body = req.body || {};
+    const { title, date, time, endTime, type, notes } = body;
+    const personId = body.personId || DEFAULT_PERSON_ID;
+
+    if (
+      !title?.trim() ||
+      !isValidDate(date) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)
+    ) {
+      return res.status(400).json({
+        message:
+          "Please provide a title, valid date, and valid start and end times.",
+      });
     }
+
     if (endTime < time) {
-      return res.status(400).json({ message: "End time must be after the start time." });
+      return res.status(400).json({
+        message: "End time must be after the start time.",
+      });
     }
+
     if (!(await Person.exists({ _id: personId, ownerId: OWNER_ID }))) {
-      return res.status(404).json({ message: "Person not found." });
+      return res.status(404).json({
+        message: "Person not found.",
+      });
     }
 
     const event = await CalendarEvent.create({
@@ -644,41 +865,74 @@ app.post("/api/calendar-events", async (req, res) => {
       personId,
       ownerId: OWNER_ID,
     });
+
     res.status(201).json(event);
   } catch (error) {
     console.error("Create calendar event:", error.message);
-    res.status(500).json({ message: "Could not save calendar event." });
+
+    res.status(500).json({
+      message: "Could not save calendar event.",
+    });
   }
 });
 
 app.put("/api/calendar-events/:id", async (req, res) => {
   try {
-    const { title, date, time, endTime, type, notes } = req.body;
-    const personId = req.body.personId || DEFAULT_PERSON_ID;
-    if (!title?.trim() || !isValidDate(date) ||
-        !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) ||
-        !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)) {
-      return res.status(400).json({ message: "Please provide a title, valid date, and valid start and end times." });
+    const body = req.body || {};
+    const { title, date, time, endTime, type, notes } = body;
+    const personId = body.personId || DEFAULT_PERSON_ID;
+
+    if (
+      !title?.trim() ||
+      !isValidDate(date) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)
+    ) {
+      return res.status(400).json({
+        message:
+          "Please provide a title, valid date, and valid start and end times.",
+      });
     }
+
     if (endTime < time) {
-      return res.status(400).json({ message: "End time must be after the start time." });
+      return res.status(400).json({
+        message: "End time must be after the start time.",
+      });
     }
+
     if (!(await Person.exists({ _id: personId, ownerId: OWNER_ID }))) {
-      return res.status(404).json({ message: "Person not found." });
+      return res.status(404).json({
+        message: "Person not found.",
+      });
     }
 
     const event = await CalendarEvent.findOneAndUpdate(
       { _id: req.params.id, ownerId: OWNER_ID },
-      { title: title.trim(), date, time, endTime, type, notes: notes || "", personId },
+      {
+        title: title.trim(),
+        date,
+        time,
+        endTime,
+        type,
+        notes: notes || "",
+        personId,
+      },
       { new: true, runValidators: true }
     );
+
     if (!event) {
-      return res.status(404).json({ message: "Calendar event not found." });
+      return res.status(404).json({
+        message: "Calendar event not found.",
+      });
     }
+
     res.json(event);
   } catch (error) {
     console.error("Update calendar event:", error.message);
-    res.status(500).json({ message: "Could not update calendar event." });
+
+    res.status(500).json({
+      message: "Could not update calendar event.",
+    });
   }
 });
 
@@ -688,21 +942,30 @@ app.delete("/api/calendar-events/:id", async (req, res) => {
       _id: req.params.id,
       ownerId: OWNER_ID,
     });
+
     if (!event) {
-      return res.status(404).json({ message: "Calendar event not found." });
+      return res.status(404).json({
+        message: "Calendar event not found.",
+      });
     }
-    res.json({ message: "Calendar event deleted successfully." });
+
+    res.json({
+      message: "Calendar event deleted successfully.",
+    });
   } catch (error) {
     console.error("Delete calendar event:", error.message);
-    res.status(500).json({ message: "Could not delete calendar event." });
-  }
-});
 
-const PORT = Number(process.env.PORT) || 5000;
+    res.status(500).json({
+      message: "Could not delete calendar event.",
+    });
+  }
+});const PORT = Number(process.env.PORT) || 5000;
 
 function connectToDatabase() {
   if (!process.env.MONGODB_URI) {
-    console.error("MONGODB_URI is missing; database connection will be retried.");
+    console.error(
+      "MONGODB_URI is missing; database connection will be retried."
+    );
   }
 
   async function connect() {
@@ -715,9 +978,14 @@ function connectToDatabase() {
         await mongoose.connect(process.env.MONGODB_URI, {
           serverSelectionTimeoutMS: 10000,
         });
+
         console.log("Connected to MongoDB");
       } catch (error) {
-        console.error("MongoDB connection failed; retrying in 5 seconds:", error.message);
+        console.error(
+          "MongoDB connection failed; retrying in 5 seconds:",
+          error.message
+        );
+
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
@@ -726,11 +994,15 @@ function connectToDatabase() {
   void connect();
 }
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`DocSpace API listening on port ${PORT}`);
+
   if (!process.env.AUTH_PASSWORD) {
-    console.error("AUTH_PASSWORD is missing; configure it in the Render environment.");
+    console.error(
+      "AUTH_PASSWORD is missing; configure it in the Render environment."
+    );
   }
+
   connectToDatabase();
 });
 
@@ -749,15 +1021,22 @@ const applicationUpload = upload;
 app.get("/api/applications", async (req, res) => {
   try {
     const personId = req.query.personId;
+
     const filter = personId
       ? personRecordFilter(personId)
       : { ownerId: OWNER_ID };
-    const applications = await Application.find(filter).sort({ createdAt: -1 });
+
+    const applications = await Application.find(filter).sort({
+      createdAt: -1,
+    });
 
     res.json(applications);
   } catch (error) {
     console.error("Load applications:", error.message);
-    res.status(500).json({ message: "Could not load applications." });
+
+    res.status(500).json({
+      message: "Could not load applications.",
+    });
   }
 });
 
@@ -769,6 +1048,8 @@ app.post(
     let uploadedFile;
 
     try {
+      const body = req.body || {};
+
       const {
         name,
         category,
@@ -776,14 +1057,20 @@ app.post(
         deadline,
         resultDate,
         notes,
-      } = req.body;
-      const personId = req.body.personId || DEFAULT_PERSON_ID;
+      } = body;
+
+      const personId = body.personId || DEFAULT_PERSON_ID;
 
       if (!name?.trim()) {
-        return res.status(400).json({ message: "Application name is required." });
+        return res.status(400).json({
+          message: "Application name is required.",
+        });
       }
+
       if (!(await Person.exists({ _id: personId, ownerId: OWNER_ID }))) {
-        return res.status(404).json({ message: "Person not found." });
+        return res.status(404).json({
+          message: "Person not found.",
+        });
       }
 
       if (req.file) {
@@ -811,14 +1098,15 @@ app.post(
     } catch (error) {
       console.error("Create application:", error.message);
 
-      // Avoid leaving an uploaded file behind if database creation fails.
       if (uploadedFile) {
         await cloudinary.uploader.destroy(uploadedFile.public_id, {
           resource_type: uploadedFile.resource_type,
         }).catch(() => {});
       }
 
-      res.status(500).json({ message: "Could not save application." });
+      res.status(500).json({
+        message: "Could not save application.",
+      });
     }
   }
 );
@@ -837,22 +1125,37 @@ app.put(
       });
 
       if (!application) {
-        return res.status(404).json({ message: "Application not found." });
+        return res.status(404).json({
+          message: "Application not found.",
+        });
       }
 
-      const { name, category, examDate, deadline, resultDate, notes } = req.body;
+      const body = req.body || {};
+      const {
+        name,
+        category,
+        examDate,
+        deadline,
+        resultDate,
+        notes,
+      } = body;
 
       if (name !== undefined) application.name = name.trim();
       if (category !== undefined) application.category = category;
-      if (req.body.personId !== undefined) {
+
+      if (body.personId !== undefined) {
         if (!(await Person.exists({
-          _id: req.body.personId,
+          _id: body.personId,
           ownerId: OWNER_ID,
         }))) {
-          return res.status(404).json({ message: "Person not found." });
+          return res.status(404).json({
+            message: "Person not found.",
+          });
         }
-        application.personId = req.body.personId;
+
+        application.personId = body.personId;
       }
+
       if (examDate !== undefined) application.examDate = examDate;
       if (deadline !== undefined) application.deadline = deadline;
       if (resultDate !== undefined) application.resultDate = resultDate;
@@ -885,6 +1188,7 @@ app.put(
       }
 
       await application.save();
+
       res.json(application);
     } catch (error) {
       console.error("Update application:", error.message);
@@ -895,7 +1199,9 @@ app.put(
         }).catch(() => {});
       }
 
-      res.status(500).json({ message: "Could not update application." });
+      res.status(500).json({
+        message: "Could not update application.",
+      });
     }
   }
 );
@@ -909,7 +1215,9 @@ app.delete("/api/applications/:id", async (req, res) => {
     });
 
     if (!application) {
-      return res.status(404).json({ message: "Application not found." });
+      return res.status(404).json({
+        message: "Application not found.",
+      });
     }
 
     if (application.cloudinaryPublicId) {
@@ -920,9 +1228,14 @@ app.delete("/api/applications/:id", async (req, res) => {
 
     await application.deleteOne();
 
-    res.json({ message: "Application deleted successfully." });
+    res.json({
+      message: "Application deleted successfully.",
+    });
   } catch (error) {
     console.error("Delete application:", error.message);
-    res.status(500).json({ message: "Could not delete application." });
+
+    res.status(500).json({
+      message: "Could not delete application.",
+    });
   }
 });
