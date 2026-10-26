@@ -593,6 +593,30 @@
   padding: 20px;
 }
 
+.confirmation-modal .doc-preview-header {
+  margin: -20px -20px 0;
+}
+
+.confirmation-message {
+  margin: 18px 0 0;
+  color: #687386;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.confirmation-actions button {
+  min-width: 92px;
+}
+
 .doc-preview-header {
   position: sticky;
   top: 0;
@@ -796,6 +820,14 @@
   .doc-preview-modal,
   .doc-form-modal {
     max-height: calc(100vh - 20px);
+  }
+
+  .confirmation-modal .doc-preview-header {
+    margin: -14px -14px 0;
+  }
+
+  .confirmation-actions button {
+    flex: 1;
   }
 
   .doc-preview-body {

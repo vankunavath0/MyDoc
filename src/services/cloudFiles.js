@@ -109,6 +109,18 @@ export async function deleteFolder(id) {
   }, "Could not delete folder");
 }
 
+export async function renameFolder(id, name) {
+  return requestJson(
+    `${FOLDERS_URL}/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    },
+    "Could not rename folder"
+  );
+}
+
 export async function getCalendarEvents() {
   return requestJson(CALENDAR_EVENTS_URL, undefined, "Could not load calendar events");
 }
@@ -184,6 +196,18 @@ export async function deleteDocument(id) {
   }
 
   return response.json();
+}
+
+export async function renameDocument(id, name) {
+  return requestJson(
+    `${API_URL}/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    },
+    "Could not rename document"
+  );
 }
 
 // ==================== APPLICATIONS ====================

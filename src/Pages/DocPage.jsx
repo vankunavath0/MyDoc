@@ -7,6 +7,8 @@ import {
   deleteFolder as deleteFolderFromCloud,
   deleteDocument as deleteDocumentFromCloud,
   deletePerson as deletePersonFromCloud,
+  renameDocument as renameDocumentInCloud,
+  renameFolder as renameFolderInCloud,
   getFolders,
   getDocuments,
   getPeople,
@@ -56,6 +58,11 @@ function Doc() {
   const [showFolderForm, setShowFolderForm] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
+  const [renameTarget, setRenameTarget] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const inputRef = useRef(null);
   const peopleRef = useRef([]);
@@ -297,7 +304,7 @@ function Doc() {
       (item) => item.id === docId
     );
 
-    if (!doc) return;
+    if (!doc) return false;
 
     try {
       await deleteDocumentFromCloud(docId);
@@ -318,8 +325,10 @@ function Doc() {
         )
       );
       setError("");
+      return true;
     } catch (deleteError) {
       setError(deleteError.message || "Could not delete the document.");
+      return false;
     }
   }
 
@@ -356,7 +365,7 @@ function Doc() {
       await deleteFolderFromCloud(folderId);
     } catch (deleteError) {
       setError(deleteError.message || "Could not delete folder documents.");
-      return;
+      return false;
     }
 
     removedDocs.forEach((doc) => {
@@ -384,17 +393,18 @@ function Doc() {
     }
 
     setError("");
+    return true;
   }
 
   async function deletePerson(personId) {
     const person = people.find((item) => item.id === personId);
-    if (!person || personId === DEFAULT_USER_ID) return;
+    if (!person || personId === DEFAULT_USER_ID) return false;
 
     try {
       await deletePersonFromCloud(personId);
     } catch (deleteError) {
       setError(deleteError.message || "Could not delete this person.");
-      return;
+      return false;
     }
 
     person.documents.forEach((doc) => {
@@ -414,6 +424,89 @@ function Doc() {
     if (selectedId === personId) {
       setSelectedId(null);
       setCurrentFolder(null);
+    }
+    return true;
+  }
+
+  async function saveRename(event) {
+    event.preventDefault();
+    const name = renameValue.trim();
+    const maxLength = renameTarget?.type === "folder" ? 100 : 255;
+
+    if (!renameTarget || !name || name.length > maxLength) return;
+
+    setSavingRename(true);
+    setError("");
+
+    try {
+      if (renameTarget.type === "folder") {
+        const renamedFolder = await renameFolderInCloud(renameTarget.id, name);
+        setPeople((current) =>
+          current.map((person) =>
+            person.id === selectedId
+              ? {
+                  ...person,
+                  folders: person.folders.map((folder) =>
+                    folder.id === renameTarget.id
+                      ? { ...folder, name: renamedFolder.name }
+                      : folder
+                  ),
+                }
+              : person
+          )
+        );
+      } else {
+        const renamedDocument = await renameDocumentInCloud(
+          renameTarget.id,
+          name
+        );
+        setPeople((current) =>
+          current.map((person) =>
+            person.id === selectedId
+              ? {
+                  ...person,
+                  documents: person.documents.map((doc) =>
+                    doc.id === renameTarget.id
+                      ? { ...doc, name: renamedDocument.name }
+                      : doc
+                  ),
+                }
+              : person
+          )
+        );
+        setPreview((current) =>
+          current?.id === renameTarget.id
+            ? { ...current, name: renamedDocument.name }
+            : current
+        );
+      }
+
+      setRenameTarget(null);
+      setRenameValue("");
+    } catch (renameError) {
+      setError(renameError.message || "Could not rename item.");
+    } finally {
+      setSavingRename(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
+
+    setDeleting(true);
+
+    try {
+      if (deleteTarget.type === "document") {
+        await deleteDocument(deleteTarget.id);
+      } else if (deleteTarget.type === "folder") {
+        await deleteFolder(deleteTarget.id);
+      } else {
+        await deletePerson(deleteTarget.id);
+      }
+
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -580,15 +673,13 @@ function Doc() {
                     className="person-delete"
                     aria-label={`Delete ${person.name}`}
                     title="Delete person"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Delete ${person.name} and all their documents?`
-                        )
-                      ) {
-                        deletePerson(person.id);
-                      }
-                    }}
+                    onClick={() =>
+                      setDeleteTarget({
+                        type: "person",
+                        id: person.id,
+                        name: person.name,
+                      })
+                    }
                   >
                     ×
                   </button>}
@@ -782,16 +873,26 @@ function Doc() {
                             Open
                           </button>
                           <button
-                            className="person-remove-btn"
                             onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Delete folder "${folder.name}" and its contents?`
-                                )
-                              ) {
-                                deleteFolder(folder.id);
-                              }
+                              setRenameTarget({
+                                type: "folder",
+                                id: folder.id,
+                                name: folder.name,
+                              });
+                              setRenameValue(folder.name);
                             }}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            className="person-remove-btn"
+                            onClick={() =>
+                              setDeleteTarget({
+                                type: "folder",
+                                id: folder.id,
+                                name: folder.name,
+                              })
+                            }
                           >
                             Delete
                           </button>
@@ -850,6 +951,18 @@ function Doc() {
                           >
                             Preview
                           </button>
+                          <button
+                            onClick={() => {
+                              setRenameTarget({
+                                type: "document",
+                                id: doc.id,
+                                name: doc.name,
+                              });
+                              setRenameValue(doc.name);
+                            }}
+                          >
+                            Rename
+                          </button>
                           <a href={doc.url} download={doc.name}>
                             Download
                           </a>
@@ -858,7 +971,13 @@ function Doc() {
                           </button>
                           <button
                             className="person-remove-btn"
-                            onClick={() => deleteDocument(doc.id)}
+                            onClick={() =>
+                              setDeleteTarget({
+                                type: "document",
+                                id: doc.id,
+                                name: doc.name,
+                              })
+                            }
                           >
                             Delete
                           </button>
@@ -887,6 +1006,116 @@ function Doc() {
           )}
         </section>
       </div>
+
+      {deleteTarget && (
+        <div
+          className="doc-preview-backdrop"
+          onClick={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+        >
+          <section
+            className="doc-form-modal confirmation-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirmation-title"
+            aria-describedby="delete-confirmation-message"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="doc-preview-header">
+              <h2 id="delete-confirmation-title">
+                Delete {deleteTarget.type}?
+              </h2>
+            </header>
+            <p id="delete-confirmation-message" className="confirmation-message">
+              {deleteTarget.type === "person"
+                ? `Delete "${deleteTarget.name}" and all of their files, folders, applications, and calendar events? This cannot be undone.`
+                : deleteTarget.type === "folder"
+                  ? `Delete "${deleteTarget.name}" and everything inside it? This cannot be undone.`
+                  : `Delete "${deleteTarget.name}"? This cannot be undone.`}
+            </p>
+            <div className="confirmation-actions">
+              <button
+                className="doc-secondary-button"
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="danger-button"
+                type="button"
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {renameTarget && (
+        <div
+          className="doc-preview-backdrop"
+          onClick={() => {
+            if (!savingRename) setRenameTarget(null);
+          }}
+        >
+          <section
+            className="doc-form-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-item-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="doc-preview-header">
+              <h2 id="rename-item-title">
+                Rename {renameTarget.type === "folder" ? "folder" : "file"}
+              </h2>
+              <button
+                className="doc-preview-close"
+                type="button"
+                disabled={savingRename}
+                onClick={() => setRenameTarget(null)}
+                aria-label="Close rename dialog"
+              >
+                ×
+              </button>
+            </header>
+            <form onSubmit={saveRename}>
+              <label htmlFor="rename-item">Name</label>
+              <input
+                id="rename-item"
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                maxLength={renameTarget.type === "folder" ? 100 : 255}
+                required
+                autoFocus
+              />
+              {error && <p className="doc-error" role="alert">{error}</p>}
+              <div className="confirmation-actions">
+                <button
+                  className="doc-secondary-button"
+                  type="button"
+                  disabled={savingRename}
+                  onClick={() => setRenameTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="doc-primary-button"
+                  type="submit"
+                  disabled={savingRename || !renameValue.trim()}
+                >
+                  {savingRename ? "Saving…" : "Save name"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {showUserForm && (
         <div

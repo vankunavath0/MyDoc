@@ -581,6 +581,40 @@ app.post("/api/folders", async (req, res) => {
   }
 });
 
+app.put("/api/folders/:id", async (req, res) => {
+  try {
+    const name = typeof req.body?.name === "string"
+      ? req.body.name.trim()
+      : "";
+
+    if (!name || name.length > 100) {
+      return res.status(400).json({
+        message: "Folder name must be between 1 and 100 characters.",
+      });
+    }
+
+    const folder = await Folder.findOneAndUpdate(
+      { _id: req.params.id, ownerId: OWNER_ID },
+      { $set: { name } },
+      { new: true, runValidators: true }
+    );
+
+    if (!folder) {
+      return res.status(404).json({
+        message: "Folder not found.",
+      });
+    }
+
+    res.json(folder);
+  } catch (error) {
+    console.error("Rename folder:", error.message);
+
+    res.status(500).json({
+      message: "Could not rename folder.",
+    });
+  }
+});
+
 app.delete("/api/folders/:id", async (req, res) => {
   try {
     const folder = await Folder.findOne({
@@ -767,6 +801,40 @@ app.get("/api/documents", async (req, res) => {
 
     res.status(500).json({
       message: "Could not load documents.",
+    });
+  }
+});
+
+app.put("/api/documents/:id", async (req, res) => {
+  try {
+    const name = typeof req.body?.name === "string"
+      ? req.body.name.trim()
+      : "";
+
+    if (!name || name.length > 255) {
+      return res.status(400).json({
+        message: "File name must be between 1 and 255 characters.",
+      });
+    }
+
+    const document = await Document.findOneAndUpdate(
+      { _id: req.params.id, ownerId: OWNER_ID },
+      { $set: { name } },
+      { new: true, runValidators: true }
+    );
+
+    if (!document) {
+      return res.status(404).json({
+        message: "Document not found.",
+      });
+    }
+
+    res.json(document);
+  } catch (error) {
+    console.error("Rename document:", error.message);
+
+    res.status(500).json({
+      message: "Could not rename document.",
     });
   }
 });
