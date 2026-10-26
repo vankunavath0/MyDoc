@@ -165,7 +165,8 @@ function App() {
                   `nav-link ${isActive ? "active" : ""}`
                 }
               >
-                ▤ Documents
+                <span className="nav-icon" aria-hidden="true">▤</span>
+                <span>Documents</span>
               </NavLink>
 
               <NavLink
@@ -174,7 +175,8 @@ function App() {
                   `nav-link ${isActive ? "active" : ""}`
                 }
               >
-                ▣ Applications
+                <span className="nav-icon" aria-hidden="true">▣</span>
+                <span>Applications</span>
               </NavLink>
 
               <NavLink
@@ -183,7 +185,8 @@ function App() {
                   `nav-link ${isActive ? "active" : ""}`
                 }
               >
-                ▦ Calendar
+                <span className="nav-icon" aria-hidden="true">▦</span>
+                <span>Calendar</span>
               </NavLink>
             </nav>
 

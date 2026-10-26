@@ -1,0 +1,350 @@
+:root {
+  color-scheme: light;
+  --mint-900: #07543e;
+  --mint-700: #087f5b;
+  --mint-800: #066849;
+  --mint-100: #e8f7f1;
+  --mint-200: #c8ebdb;
+  --mint-300: #a9dec8;
+  --mint-focus: #14966b;
+  --surface-page: #f6fbf8;
+  --surface-soft: #f7fcf9;
+  --border-soft: #e2eee8;
+}
+
+html,
+body,
+#root,
+.app-layout {
+  background: var(--surface-page);
+}
+
+body,
+.page-content,
+.login-page,
+.auth-loading {
+  background-color: var(--surface-page);
+}
+
+.top-navbar,
+.top-nav-links,
+.workspace-layout,
+.doc-layout,
+.calendar-panel,
+.schedule-panel,
+.calendar-summary-card,
+.document-card,
+.person-file-card,
+.login-card,
+.session-warning,
+.preview-modal,
+.form-modal,
+.doc-preview-modal,
+.doc-form-modal,
+.calendar-form-modal {
+  border-color: var(--border-soft);
+  background-color: #ffffff;
+}
+
+.user-sidebar,
+.people-panel {
+  border-color: var(--border-soft);
+  background-color: var(--surface-soft);
+}
+
+.document-preview,
+.person-file-cover,
+.document-cover,
+.preview-body {
+  background-color: #f1f8f4;
+}
+
+.status-dot {
+  background: var(--mint-700);
+  box-shadow: 0 0 7px #087f5b30;
+}
+
+.brand-icon,
+.login-logo {
+  border-color: var(--mint-200);
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.nav-link.active,
+.filter-button.active,
+.application-type,
+.people-count,
+.doc-upload-icon,
+.calendar-add-small {
+  border-color: var(--mint-200);
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.nav-link:hover,
+.secondary-button:hover,
+.document-actions button:hover,
+.person-file-actions button:hover,
+.person-file-actions a:hover,
+.application-page .document-actions button:hover,
+.application-page .document-actions a:hover,
+.calendar-arrow:hover,
+.doc-secondary-button:hover {
+  background: #f0f8f4;
+}
+
+.nav-link.active:hover,
+.filter-button.active:hover,
+.calendar-add-small:hover {
+  background: #d5f0e3;
+}
+
+.primary-button,
+.doc-primary-button,
+.login-button,
+.calendar-day.today .calendar-day-number {
+  background: var(--mint-700);
+  color: #ffffff;
+}
+
+.primary-button:hover,
+.doc-primary-button:hover,
+.login-button:hover {
+  background: var(--mint-800);
+}
+
+.doc-eyebrow,
+.calendar-eyebrow,
+.eyebrow,
+.login-eyebrow,
+.password-toggle,
+.doc-breadcrumbs button,
+.person-arrow,
+.schedule-event-actions button,
+.upcoming-event:hover .upcoming-event-details strong,
+.application-page .upload-symbol,
+.application-page .document-actions button:hover,
+.application-page .document-actions a:hover,
+.doc-file-icon,
+.file-icon.word {
+  color: var(--mint-700);
+}
+
+.doc-file-icon,
+.file-icon.word {
+  background: var(--mint-100);
+}
+
+.user-item.active,
+.person-box.selected,
+.calendar-day.selected {
+  border-color: var(--mint-200);
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.user-item.active .user-avatar,
+.person-box.selected .person-avatar,
+.selected-person-avatar {
+  background: #d5f0e3;
+  color: var(--mint-700);
+}
+
+.new-user-button,
+.doc-dropzone.active,
+.application-page .upload-zone.dragging,
+.application-page .upload-symbol {
+  border-color: var(--mint-300);
+  background: #f0faf5;
+  color: var(--mint-700);
+}
+
+.new-user-button:hover {
+  border-color: var(--mint-focus);
+  background: #e8f7f1;
+}
+
+.document-preview-placeholder {
+  border-color: var(--mint-200);
+  color: var(--mint-700);
+}
+
+.person-file-view,
+.cover-view {
+  border-color: var(--mint-200);
+  color: var(--mint-700);
+}
+
+.person-file-cover:hover,
+.document-cover:hover {
+  border-color: var(--mint-200);
+}
+
+.person-file-card:hover,
+.document-card:hover {
+  border-color: var(--mint-300);
+}
+
+.folder-card:hover {
+  border-color: var(--mint-300);
+  background: var(--surface-soft);
+}
+
+.folder-icon {
+  color: var(--mint-700);
+}
+
+.file-icon,
+.doc-file-icon {
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.file-icon.pdf,
+.file-icon.excel,
+.file-icon.slides,
+.doc-file-icon.pdf,
+.doc-file-icon.excel,
+.doc-file-icon.slides {
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.calendar-summary-card .summary-dot.event-other,
+.schedule-event-marker.event-other {
+  background: var(--mint-700);
+}
+
+.calendar-view-toggle button.active {
+  color: var(--mint-700);
+}
+
+.calendar-day:hover {
+  border-color: var(--mint-300);
+  background: #f7fcf9;
+}
+
+.calendar-day.today,
+.calendar-day.selected {
+  border-color: var(--mint-focus);
+}
+
+.calendar-day.selected {
+  box-shadow: inset 0 0 0 1px var(--mint-focus);
+}
+
+.calendar-event.event-other,
+.day-schedule-event.event-other,
+.schedule-type-label.event-other {
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.summary-dot.event-other {
+  background: var(--mint-700);
+}
+
+.calendar-add-small {
+  color: var(--mint-700);
+}
+
+.calendar-add-small:hover {
+  background: #d5f0e3;
+}
+
+.search-input:focus,
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
+.people-search:focus,
+.doc-form-modal input:focus,
+.calendar-form-group input:focus,
+.calendar-form-group select:focus,
+.calendar-form-group textarea:focus,
+.password-input-wrapper:focus-within {
+  border-color: var(--mint-focus);
+  box-shadow: 0 0 0 3px #14966b20;
+}
+
+.remember-device input {
+  accent-color: var(--mint-700);
+}
+
+.password-input-wrapper:focus-within {
+  border-color: var(--mint-focus);
+}
+
+.login-logo {
+  border: 1px solid var(--mint-200);
+  background: var(--mint-100);
+  color: var(--mint-700);
+}
+
+.login-button {
+  background: var(--mint-700);
+}
+
+.login-button:hover {
+  background: var(--mint-800);
+}
+
+.login-error,
+.doc-error,
+.calendar-error,
+.danger-button,
+.delete-button,
+.person-remove-btn,
+.schedule-delete {
+  color: #b42318;
+}
+
+.login-error,
+.doc-error,
+.calendar-error {
+  background: #fff4f2;
+}
+
+.login-error,
+.calendar-error {
+  border-color: #f0c3c3;
+}
+
+:focus-visible {
+  outline-color: var(--mint-focus);
+}
+
+@media (max-width: 650px) {
+  .top-navbar {
+    border-bottom-color: #e2eee8;
+  }
+
+  .page-content {
+    width: 100%;
+  }
+
+  .top-nav-links {
+    border-top-color: #e2eee8;
+  }
+
+  .nav-link {
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .page-title,
+  .doc-header h1,
+  .application-page .page-header h1,
+  .calendar-page .page-header h1 {
+    overflow-wrap: anywhere;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .doc-primary-button,
+  .doc-secondary-button,
+  .login-button {
+    min-height: 44px;
+  }
+}
