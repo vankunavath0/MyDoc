@@ -48,12 +48,21 @@ export async function restoreRememberedSession() {
   );
 }
 
-export async function logout() {
+export async function logout({ preserveRememberedDevice = false } = {}) {
   return requestJson(
     `${API_BASE_URL}/api/auth/logout`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preserveRememberedDevice }),
+    },
     "Could not sign out"
   );
+}
+
+export function getInlinePdfUrl(fileUrl) {
+  if (!fileUrl || fileUrl.includes("/fl_inline/")) return fileUrl;
+  return fileUrl.replace("/upload/", "/upload/fl_inline/");
 }
 
 export async function refreshSession() {

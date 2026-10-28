@@ -20,8 +20,8 @@ import {
   restoreRememberedSession,
 } from "./services/cloudFiles";
 
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
-const IDLE_WARNING_MS = 13 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+const IDLE_WARNING_MS = IDLE_TIMEOUT_MS - 2 * 60 * 1000;
 const SESSION_REFRESH_INTERVAL_MS = 60 * 1000;
 
 function App() {
@@ -71,7 +71,7 @@ function App() {
     if (lockingRef.current) return;
     lockingRef.current = true;
     try {
-      await logout();
+      await logout({ preserveRememberedDevice: true });
     } catch (error) {
       console.error("Could not clear the server session:", error.message);
     } finally {

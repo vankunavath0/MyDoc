@@ -72,7 +72,7 @@ const upload = multer({
 
 const OWNER_ID = "local-demo-user";
 const DEFAULT_PERSON_ID = OWNER_ID;
-const SESSION_IDLE_MS = 15 * 60 * 1000;
+const SESSION_IDLE_MS = 24 * 60 * 60 * 1000;
 const REMEMBER_DEVICE_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = "docspace_session";
 const DEVICE_COOKIE = "docspace_device";
@@ -296,18 +296,36 @@ app.post("/api/auth/remembered-login", async (req, res) => {
 app.post("/api/auth/logout", async (req, res) => {
   try {
     const token = getCookie(req, SESSION_COOKIE);
+    const preserveRememberedDevice =
+      req.body?.preserveRememberedDevice === true;
 
     if (token) {
-      await AuthSession.deleteOne({
+      const session = await AuthSession.findOne({
         sessionTokenHash: hashToken(token),
       });
+
+      if (
+        preserveRememberedDevice &&
+        session?.deviceTokenHash &&
+        session.deviceExpiresAt > new Date()
+      ) {
+        session.sessionTokenHash = null;
+        session.sessionExpiresAt = new Date(0);
+        await session.save();
+      } else if (session) {
+        await session.deleteOne();
+      }
     }
 
     clearCookie(res, SESSION_COOKIE);
-    clearCookie(res, DEVICE_COOKIE);
+    if (!preserveRememberedDevice) {
+      clearCookie(res, DEVICE_COOKIE);
+    }
 
     res.json({
-      message: "Signed out and removed this device's remembered access.",
+      message: preserveRememberedDevice
+        ? "Workspace locked."
+        : "Signed out and removed this device's remembered access.",
     });
   } catch (error) {
     console.error("Logout failed:", error.message);

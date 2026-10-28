@@ -12,6 +12,7 @@ import {
   getFolders,
   getDocuments,
   getPeople,
+  getInlinePdfUrl,
   uploadDocument,
 } from "../services/cloudFiles";
 
@@ -20,6 +21,7 @@ const makeId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const DEFAULT_USER_ID = "local-demo-user";
+const MAX_FILES_PER_UPLOAD = 10;
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -205,6 +207,10 @@ function Doc() {
 
     const files = Array.from(fileList);
     if (files.length === 0) return;
+    if (files.length > MAX_FILES_PER_UPLOAD) {
+      setError(`You can upload up to ${MAX_FILES_PER_UPLOAD} files at a time.`);
+      return;
+    }
 
     setUploading(true);
     setError("");
@@ -547,7 +553,7 @@ function Doc() {
       return (
         <iframe
           className="doc-pdf-preview"
-          src={doc.url}
+          src={getInlinePdfUrl(doc.url)}
           title={doc.name}
         />
       );
@@ -785,7 +791,10 @@ function Doc() {
               >
                 <div className="doc-upload-icon">↑</div>
                 <strong>Upload documents</strong>
-                <p>Drag files here or choose files from your device.</p>
+                <p>
+                  Drag files here or choose up to {MAX_FILES_PER_UPLOAD} files
+                  from your device at a time.
+                </p>
                 <button
                   className="doc-secondary-button"
                   disabled={uploading}
