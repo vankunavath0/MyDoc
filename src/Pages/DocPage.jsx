@@ -538,6 +538,16 @@ function Doc() {
     }
   }
 
+  function openDocumentPreview(doc) {
+    if (!doc.url) {
+      setPreview(doc);
+      return;
+    }
+
+    const url = doc.type === "pdf" ? getPdfPreviewUrl(doc.url) : doc.url;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   function renderPreview(doc) {
     if (doc.type === "image") {
       return (
@@ -914,7 +924,7 @@ function Doc() {
                     <article className="person-file-card" key={doc.id}>
                       <button
                         className={`person-file-cover ${doc.type}`}
-                        onClick={() => setPreview(doc)}
+                        onClick={() => openDocumentPreview(doc)}
                         title={`Preview ${doc.name}`}
                       >
                         {doc.type === "image" ? (
@@ -956,7 +966,7 @@ function Doc() {
                         <div className="person-file-actions">
                           <button
                             className="person-view-btn"
-                            onClick={() => setPreview(doc)}
+                            onClick={() => openDocumentPreview(doc)}
                           >
                             Preview
                           </button>

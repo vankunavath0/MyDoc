@@ -466,6 +466,16 @@ function Application() {
     );
   };
 
+  const openApplicationPreview = (item) => {
+    if (!item.url) {
+      setPreview(item);
+      return;
+    }
+
+    const url = item.type === "pdf" ? getPdfPreviewUrl(item.url) : item.url;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const formatDate = (date) => {
     if (!date) return "Not set";
 
@@ -626,7 +636,7 @@ function Application() {
                     <button
                       type="button"
                       className={`document-cover ${item.type}`}
-                      onClick={() => setPreview(item)}
+                      onClick={() => openApplicationPreview(item)}
                       title={`Preview ${item.name}`}
                     >
                       {item.type === "image" && item.url ? (
@@ -682,7 +692,7 @@ function Application() {
                       <div className="document-actions">
                         <button
                           className="view-button"
-                          onClick={() => setPreview(item)}
+                          onClick={() => openApplicationPreview(item)}
                         >
                           Preview
                         </button>

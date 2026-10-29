@@ -62,7 +62,18 @@ export async function logout({ preserveRememberedDevice = false } = {}) {
 
 export function getPdfPreviewUrl(fileUrl) {
   if (!fileUrl) return fileUrl;
-  return fileUrl.replace("/upload/fl_inline/", "/upload/");
+
+  const uploadPath = "/upload/";
+  const uploadIndex = fileUrl.indexOf(uploadPath);
+
+  if (uploadIndex === -1 || fileUrl.includes("/fl_inline/")) {
+    return fileUrl;
+  }
+
+  const insertionIndex = uploadIndex + uploadPath.length;
+  return `${fileUrl.slice(0, uploadIndex)}${uploadPath}fl_inline/${fileUrl.slice(
+    insertionIndex
+  )}`;
 }
 
 export async function refreshSession() {
