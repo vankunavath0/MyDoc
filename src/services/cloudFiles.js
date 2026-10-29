@@ -60,9 +60,9 @@ export async function logout({ preserveRememberedDevice = false } = {}) {
   );
 }
 
-export function getInlinePdfUrl(fileUrl) {
-  if (!fileUrl || fileUrl.includes("/fl_inline/")) return fileUrl;
-  return fileUrl.replace("/upload/", "/upload/fl_inline/");
+export function getPdfPreviewUrl(fileUrl) {
+  if (!fileUrl) return fileUrl;
+  return fileUrl.replace("/upload/fl_inline/", "/upload/");
 }
 
 export async function refreshSession() {

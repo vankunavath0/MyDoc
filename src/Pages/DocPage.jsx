@@ -12,7 +12,7 @@ import {
   getFolders,
   getDocuments,
   getPeople,
-  getInlinePdfUrl,
+  getPdfPreviewUrl,
   uploadDocument,
 } from "../services/cloudFiles";
 
@@ -553,7 +553,7 @@ function Doc() {
       return (
         <iframe
           className="doc-pdf-preview"
-          src={getInlinePdfUrl(doc.url)}
+          src={getPdfPreviewUrl(doc.url)}
           title={doc.name}
         />
       );

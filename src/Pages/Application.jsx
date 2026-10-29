@@ -7,7 +7,7 @@ import {
   getPeople,
   saveApplicationToCloud,
   deleteApplicationFromCloud,
-  getInlinePdfUrl,
+  getPdfPreviewUrl,
 } from "../services/cloudFiles";
 
 const makeId = () =>
@@ -422,7 +422,7 @@ function Application() {
       return (
         <iframe
           className="pdf-preview"
-          src={getInlinePdfUrl(item.url)}
+          src={getPdfPreviewUrl(item.url)}
           title={item.fileName || item.name}
         />
       );
